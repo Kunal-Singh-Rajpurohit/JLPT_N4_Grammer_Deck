@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JLPT N4 Grammar Flashcards</title>
+    <style>
+        :root {
+            --primary: #3b82f6; /* Blue theme for N4 to distinguish from N5 Red */
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --example-bg: #f1f5f9;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            width: 90%;
+            max-width: 400px;
+            perspective: 1000px;
+        }
+        .card {
+            width: 100%;
+            height: 550px; 
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 20px;
+        }
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            box-sizing: border-box;
+            border-radius: 20px;
+            background: var(--card-bg);
+            text-align: center;
+        }
+        .card-face-back {
+            transform: rotateY(180deg);
+            text-align: left;
+            justify-content: flex-start;
+            overflow-y: auto;
+            background: var(--card-bg);
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+        
+        /* Front Content */
+        .pattern-name {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        .explanation {
+            font-size: 1.1rem;
+            color: #475569;
+            line-height: 1.5;
+            padding: 0 10px;
+        }
+
+        /* Back Content */
+        .example-container {
+            width: 100%;
+            margin-bottom: 12px;
+            background: var(--example-bg);
+            padding: 12px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            box-sizing: border-box;
+        }
+        .example-jp {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: var(--text);
+        }
+        .example-en {
+            font-size: 0.9rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        .controls {
+            margin-top: 25px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            background: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            touch-action: manipulation;
+        }
+        button:active {
+            background: #1d4ed8;
+        }
+        .progress {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        .hint {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 20px;
+            position: absolute;
+            bottom: 20px;
+        }
+
+        /* --- Editing and Adding UI --- */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            z-index: 100;
+            padding: 0;
+        }
+        .action-btns {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            background: #e2e8f0;
+            color: #334155;
+            border-radius: 8px;
+        }
+        .btn-save-edit {
+            background: #10b981; 
+            color: white;
+            display: none;
+        }
+        
+        .edit-fields {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .edit-fields textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-family: inherit;
+            resize: none;
+            box-sizing: border-box;
+            height: 40px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            width: 85%;
+            max-width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h3 {
+            margin: 0 0 5px 0;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        .modal input, .modal textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .modal textarea {
+            height: 40px;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .modal-actions button.btn-cancel {
+            background: #e2e8f0;
+            color: #334155;
+        }
+        .modal-actions button.btn-confirm {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress" id="progress">1 / 40</div>
+
+    <div class="container" id="swipe-container">
+        <div class="card" id="card">
+            <div class="card-face card-face-front">
+                <div class="pattern-name" id="pattern-name">Loading...</div>
+                <div class="explanation" id="explanation"></div>
+                <div class="hint">Tap to see examples</div>
+            </div>
+            
+            <div class="card-face card-face-back">
+                <div id="examples-display" style="width: 100%;">
+                    <div class="example-container"><div class="example-jp" id="ex1-jp">Loading...</div><div class="example-en" id="ex1-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex2-jp">Loading...</div><div class="example-en" id="ex2-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex3-jp">Loading...</div><div class="example-en" id="ex3-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex4-jp">Loading...</div><div class="example-en" id="ex4-en"></div></div>
+                    <div class="example-container"><div class="example-jp" id="ex5-jp">Loading...</div><div class="example-en" id="ex5-en"></div></div>
+                </div>
+
+                <div class="edit-fields" id="edit-fields">
+                    <textarea id="edit-ex1-jp" placeholder="Ex 1 (JP)"></textarea><textarea id="edit-ex1-en" placeholder="Ex 1 (EN)"></textarea>
+                    <textarea id="edit-ex2-jp" placeholder="Ex 2 (JP)"></textarea><textarea id="edit-ex2-en" placeholder="Ex 2 (EN)"></textarea>
+                    <textarea id="edit-ex3-jp" placeholder="Ex 3 (JP)"></textarea><textarea id="edit-ex3-en" placeholder="Ex 3 (EN)"></textarea>
+                    <textarea id="edit-ex4-jp" placeholder="Ex 4 (JP)"></textarea><textarea id="edit-ex4-en" placeholder="Ex 4 (EN)"></textarea>
+                    <textarea id="edit-ex5-jp" placeholder="Ex 5 (JP)"></textarea><textarea id="edit-ex5-en" placeholder="Ex 5 (EN)"></textarea>
+                </div>
+                
+                <div class="action-btns">
+                    <button class="btn-small" id="btn-edit">Edit Examples</button>
+                    <button class="btn-small btn-save-edit" id="btn-save-edit">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="btn-prev">Prev</button>
+        <button id="btn-next">Next</button>
+    </div>
+
+    <button class="fab" id="btn-add-card">+</button>
+
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal">
+            <h3>Add N4 Grammar</h3>
+            <input type="text" id="new-pattern" placeholder="Pattern (e.g. 〜かもしれない)">
+            <textarea id="new-explanation" placeholder="Explanation..."></textarea>
+            <textarea id="new-ex1" placeholder="Ex 1: JP - EN"></textarea>
+            <textarea id="new-ex2" placeholder="Ex 2: JP - EN"></textarea>
+            <textarea id="new-ex3" placeholder="Ex 3: JP - EN"></textarea>
+            <textarea id="new-ex4" placeholder="Ex 4: JP - EN"></textarea>
+            <textarea id="new-ex5" placeholder="Ex 5: JP - EN"></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="btn-cancel-add">Cancel</button>
+                <button class="btn-confirm" id="btn-confirm-add">Save Card</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            const defaultData = [
+                { pat: "〜かもしれない", exp: "Might; maybe; perhaps. Indicates a possibility.", ex1jp: "明日は雨が降るかもしれない。", ex1en: "It might rain tomorrow.", ex2jp: "彼は来ないかもしれない。", ex2en: "He might not come.", ex3jp: "この本は難しいかもしれない。", ex3en: "This book might be difficult.", ex4jp: "田中さんは病気かもしれない。", ex4en: "Mr. Tanaka might be sick.", ex5jp: "約束の時間を間違えたかもしれない。", ex5en: "I might have mistaken the appointment time." },
+                { pat: "〜でしょう / だろう", exp: "Probably; it seems. Used to express conjecture or ask for agreement.", ex1jp: "明日は晴れるでしょう。", ex1en: "It will probably be sunny tomorrow.", ex2jp: "この料理は美味しいだろう。", ex2en: "This dish is probably delicious.", ex3jp: "彼はもう家に着いたでしょう。", ex3en: "He has probably arrived home already.", ex4jp: "会議は三時に終わるだろう。", ex4en: "The meeting will probably end at three.", ex5jp: "あの店は高いでしょう。", ex5en: "That shop is probably expensive." },
+                { pat: "〜はずだ", exp: "It must be; it should be. Expectation based on objective facts.", ex1jp: "彼は今日来るはずです。", ex1en: "He is supposed to come today.", ex2jp: "この薬を飲めば良くなるはずだ。", ex2en: "If you take this medicine, you should get better.", ex3jp: "田中さんは会議中のはずです。", ex3en: "Mr. Tanaka should be in a meeting.", ex4jp: "この問題は難しくないはずだ。", ex4en: "This problem shouldn't be difficult.", ex5jp: "荷物は明日届くはずです。", ex5en: "The package should arrive tomorrow." },
+                { pat: "〜ば (Conditional)", exp: "If... then. Used for conditions. (V-ba form)", ex1jp: "雨が降れば、試合は中止になります。", ex1en: "If it rains, the game will be canceled.", ex2jp: "薬を飲めば、すぐに治りますよ。", ex2en: "If you take the medicine, you'll heal quickly.", ex3jp: "安ければ、買いたいです。", ex3en: "If it's cheap, I want to buy it.", ex4jp: "時間が空けば、連絡します。", ex4en: "If I have free time, I will contact you.", ex5jp: "道を聞けば、分かります。", ex5en: "If you ask for directions, you will know." },
+                { pat: "〜たら (Conditional)", exp: "If; when; after. Expresses a condition or sequence of events.", ex1jp: "雨が降ったら、行きません。", ex1en: "If it rains, I won't go.", ex2jp: "日本に着いたら、電話します。", ex2en: "When I arrive in Japan, I will call.", ex3jp: "仕事が終わったら、飲みに行きましょう。", ex3en: "After work finishes, let's go drinking.", ex4jp: "安かったら、買います。", ex4en: "If it was cheap, I'll buy it.", ex5jp: "分からないことがあったら、聞いてください。", ex5en: "If there's something you don't understand, please ask." },
+                { pat: "〜なら", exp: "If it is the case that; as for. Often reacts to what someone just said.", ex1jp: "東京に行くなら、新幹線が便利です。", ex1en: "If you are going to Tokyo, the bullet train is convenient.", ex2jp: "彼が来ないなら、私たちが始めましょう。", ex2en: "If he isn't coming, let's start.", ex3jp: "日本語なら、少し話せます。", ex3en: "If it's Japanese, I can speak a little.", ex4jp: "嫌なら、無理しなくていいですよ。", ex4en: "If you don't want to, you don't have to force yourself.", ex5jp: "結婚するなら、優しい人がいいです。", ex5en: "If I marry, a kind person is good." },
+                { pat: "〜と (Conditional)", exp: "When A happens, B inevitably happens. Natural consequence.", ex1jp: "春になると、桜が咲きます。", ex1en: "When spring comes, cherry blossoms bloom.", ex2jp: "このボタンを押すと、水が出ます。", ex2en: "If you press this button, water comes out.", ex3jp: "右へ曲がると、銀行があります。", ex3en: "When you turn right, there is a bank.", ex4jp: "お酒を飲むと、顔が赤くなります。", ex4en: "When I drink alcohol, my face turns red.", ex5jp: "朝起きると、雪が降っていました。", ex5en: "When I woke up in the morning, it was snowing." },
+                { pat: "〜てあげる / もらう / くれる", exp: "Giving and receiving actions (Verbs).", ex1jp: "妹に本を読んであげました。", ex1en: "I read a book for my younger sister.", ex2jp: "友だちに自転車を修理してもらいました。", ex2en: "I had my friend repair my bicycle.", ex3jp: "先生が漢字を教えてくれました。", ex3en: "The teacher taught me Kanji.", ex4jp: "荷物を持ってあげましょうか。", ex4en: "Shall I carry your bag for you?", ex5jp: "彼が写真を撮ってくれました。", ex5en: "He took a picture for me." },
+                { pat: "〜ても (Even if)", exp: "Even if; no matter what. Concessive condition.", ex1jp: "雨が降っても、試合をします。", ex1en: "Even if it rains, we will play the game.", ex2jp: "安くても、買いません。", ex2en: "Even if it's cheap, I won't buy it.", ex3jp: "薬を飲んでも、熱が下がりません。", ex3en: "Even though I took medicine, my fever won't go down.", ex4jp: "忙しくても、毎日運動します。", ex4en: "Even if I'm busy, I exercise every day.", ex5jp: "好きじゃなくても、野菜を食べなさい。", ex5en: "Even if you don't like it, eat your vegetables." },
+                { pat: "〜のに", exp: "Despite; although. Expresses surprise or dissatisfaction.", ex1jp: "一生懸命勉強したのに、試験に落ちました。", ex1en: "Even though I studied hard, I failed the exam.", ex2jp: "春なのに、とても寒いです。", ex2en: "Even though it is spring, it is very cold.", ex3jp: "約束をしたのに、彼は来ませんでした。", ex3en: "Despite making a promise, he didn't come.", ex4jp: "この車は古いのに、高いです。", ex4en: "Even though this car is old, it's expensive.", ex5jp: "静かにしているのに、怒られました。", ex5en: "Even though I'm being quiet, I got scolded." },
+                { pat: "〜ようです", exp: "It seems; it looks like. Judgment based on observation/feeling.", ex1jp: "外は寒いようです。", ex1en: "It seems cold outside.", ex2jp: "彼は本当の理由を知っているようです。", ex2en: "He seems to know the true reason.", ex3jp: "このケーキは甘いようです。", ex3en: "This cake seems sweet.", ex4jp: "誰もいないようですね。", ex4en: "It seems no one is here.", ex5jp: "明日は雨が降るようです。", ex5en: "It seems it will rain tomorrow." },
+                { pat: "〜みたいです", exp: "It seems; looks like (colloquial). Can also mean 'resembles'.", ex1jp: "彼は怒っているみたいです。", ex1en: "He seems to be angry.", ex2jp: "この雲は犬みたいですね。", ex2en: "This cloud looks like a dog, doesn't it?", ex3jp: "田中さんは来ないみたいです。", ex3en: "It seems Mr. Tanaka isn't coming.", ex4jp: "今日は日曜日みたいに静かです。", ex4en: "Today is quiet like a Sunday.", ex5jp: "星みたいに光っています。", ex5en: "It's shining like a star." },
+                { pat: "〜らしいです", exp: "I heard that; it seems that (based on hearsay or objective signs).", ex1jp: "明日は雪が降るらしいです。", ex1en: "I heard it will snow tomorrow.", ex2jp: "彼は会社を辞めるらしいです。", ex2en: "It seems he is going to quit the company.", ex3jp: "あの二人は結婚するらしいですよ。", ex3en: "I heard those two are getting married.", ex4jp: "この映画は面白いらしいです。", ex4en: "I heard this movie is interesting.", ex5jp: "田中さんは昨日休んだらしいです。", ex5en: "It seems Mr. Tanaka was absent yesterday." },
+                { pat: "〜そうです (Hearsay)", exp: "I heard that; it is said that. (Attached to plain form)", ex1jp: "天気予報によると、明日は晴れるそうです。", ex1en: "According to the weather forecast, I heard it will be sunny tomorrow.", ex2jp: "彼は来月結婚するそうです。", ex2en: "I heard he is getting married next month.", ex3jp: "この店は美味しいそうです。", ex3en: "I heard this shop is delicious.", ex4jp: "社長は明日出張だそうです。", ex4en: "I heard the president is on a business trip tomorrow.", ex5jp: "昔、ここは海だったそうです。", ex5en: "I heard this place used to be an ocean." },
+                { pat: "〜そうです (Appearance)", exp: "It looks like; it appears. (Attached to verb stem or adj root)", ex1jp: "雨が降りそうです。", ex1en: "It looks like it's going to rain.", ex2jp: "この荷物は重そうです。", ex2en: "This baggage looks heavy.", ex3jp: "彼は忙しそうです。", ex3en: "He looks busy.", ex4jp: "美味しそうなケーキですね。", ex4en: "That looks like a delicious cake.", ex5jp: "あの映画は面白そうです。", ex5en: "That movie looks interesting." },
+                { pat: "〜ために", exp: "In order to; for the sake of. Expresses purpose.", ex1jp: "家を買うために、お金を貯めています。", ex1en: "I am saving money in order to buy a house.", ex2jp: "健康のために、毎日歩いています。", ex2en: "For the sake of my health, I walk every day.", ex3jp: "家族のために働きます。", ex3en: "I work for my family.", ex4jp: "試験に合格するために、勉強します。", ex4en: "I study in order to pass the exam.", ex5jp: "彼を助けるために来ました。", ex5en: "I came to help him." },
+                { pat: "〜ように", exp: "So that; in order to. Used with non-volitional verbs or negative verbs.", ex1jp: "忘れないように、メモを書きました。", ex1en: "I wrote a memo so that I wouldn't forget.", ex2jp: "みんなに聞こえるように、大きく話してください。", ex2en: "Please speak loudly so that everyone can hear.", ex3jp: "日本語が上手になるように、毎日練習しています。", ex3en: "I practice daily so that my Japanese will improve.", ex4jp: "風邪を引かないように気をつけてください。", ex4en: "Please be careful so that you don't catch a cold.", ex5jp: "電車に間に合うように走りました。", ex5en: "I ran so that I would make it to the train." },
+                { pat: "〜すぎる", exp: "Too much; excessively.", ex1jp: "昨日はお酒を飲みすぎました。", ex1en: "I drank too much alcohol yesterday.", ex2jp: "この靴は大きすぎます。", ex2en: "These shoes are too big.", ex3jp: "最近、彼は働きすぎです。", ex3en: "Recently, he is working too much.", ex4jp: "テレビの見すぎは目に悪いです。", ex4en: "Watching too much TV is bad for your eyes.", ex5jp: "この問題は難しすぎて分かりません。", ex5en: "This problem is too difficult, I don't understand." },
+                { pat: "〜やすい / 〜にくい", exp: "Easy to do / Hard to do. (Attached to verb stem)", ex1jp: "このペンはとても書きやすいです。", ex1en: "This pen is very easy to write with.", ex2jp: "この漢字は覚えにくいです。", ex2en: "This Kanji is hard to memorize.", ex3jp: "この靴は歩きやすいです。", ex3en: "These shoes are easy to walk in.", ex4jp: "彼の話は分かりにくいです。", ex4en: "His story is hard to understand.", ex5jp: "雨の日は事故が起きやすいです。", ex5en: "Accidents are easy to happen on rainy days." },
+                { pat: "〜てしまう / 〜ちゃう", exp: "Finished completely OR an action done with regret/accidentally.", ex1jp: "ケーキを全部食べてしまいました。", ex1en: "I completely ate all the cake.", ex2jp: "パスポートを忘れてしまいました。", ex2en: "I accidentally forgot my passport.", ex3jp: "宿題はもうやってしまいました。", ex3en: "I have already completely finished the homework.", ex4jp: "大切なグラスを割ってしまいました。", ex4en: "I accidentally broke an important glass.", ex5jp: "電車に遅れちゃった。", ex5en: "I accidentally missed the train (colloquial)." },
+                { pat: "〜ておく / 〜とく", exp: "To do something in advance for future use; to leave as is.", ex1jp: "旅行の前に、ホテルを予約しておきます。", ex1en: "I will reserve a hotel in advance of the trip.", ex2jp: "窓を開けておいてください。", ex2en: "Please leave the window open.", ex3jp: "ジュースを冷蔵庫に入れておきました。", ex3en: "I put the juice in the fridge (in advance).", ex4jp: "会議の資料を読んでおいてください。", ex4en: "Please read the meeting documents in advance.", ex5jp: "ドアは閉めといて。", ex5en: "Leave the door closed (colloquial)." },
+                { pat: "〜てある", exp: "A state resulting from a deliberate human action. (Intransitive use of transitive verbs)", ex1jp: "壁にカレンダーが貼ってあります。", ex1en: "A calendar is hung on the wall (intentionally).", ex2jp: "机の上に本が置いてあります。", ex2en: "A book has been placed on the desk.", ex3jp: "黒板に字が書いてあります。", ex3en: "Characters have been written on the blackboard.", ex4jp: "部屋の電気がつけてあります。", ex4en: "The room light has been left turned on.", ex5jp: "名前が書いてある紙をください。", ex5en: "Please give me the paper with the name written on it." },
+                { pat: "〜ている (Resultant State)", exp: "A resultant state that remains. (Used with intransitive verbs)", ex1jp: "窓が開いています。", ex1en: "The window is open (state).", ex2jp: "電気が消えています。", ex2en: "The light is off (state).", ex3jp: "道が混んでいます。", ex3en: "The road is crowded.", ex4jp: "パソコンが壊れています。", ex4en: "The computer is broken.", ex5jp: "花が咲いています。", ex5en: "The flowers are blooming." },
+                { pat: "〜ばよかった", exp: "I should have done; I wish I had done. Expresses regret.", ex1jp: "傘を持ってくればよかった。", ex1en: "I should have brought an umbrella.", ex2jp: "もっと勉強すればよかったです。", ex2en: "I should have studied more.", ex3jp: "彼に言わなければよかった。", ex3en: "I shouldn't have told him.", ex4jp: "あの靴を買えばよかったなあ。", ex4en: "I wish I had bought those shoes.", ex5jp: "早く寝ればよかった。", ex5en: "I should have gone to sleep early." },
+                { pat: "〜ようとする", exp: "Try to do; be about to do. Volitional form + とする.", ex1jp: "家を出ようとしたとき、雨が降り出しました。", ex1en: "When I was about to leave the house, it started to rain.", ex2jp: "犬が逃げようとしています。", ex2en: "The dog is trying to escape.", ex3jp: "彼に電話しようとしたが、忘れました。", ex3en: "I tried to call him, but I forgot.", ex4jp: "寝ようとしたら、地震がありました。", ex4en: "When I was about to sleep, there was an earthquake.", ex5jp: "ドアを開けようとしましたが、開きませんでした。", ex5en: "I tried to open the door, but it wouldn't open." },
+                { pat: "〜ことにする", exp: "To decide to do something. Represents personal choice.", ex1jp: "明日からタバコをやめることにしました。", ex1en: "I have decided to quit smoking from tomorrow.", ex2jp: "日本へ留学することにしました。", ex2en: "I have decided to study abroad in Japan.", ex3jp: "今日は早く寝ることにします。", ex3en: "I will decide to go to sleep early today.", ex4jp: "毎日運動することにしています。", ex4en: "I make it a rule to exercise every day.", ex5jp: "新しい車を買わないことにしました。", ex5en: "I decided not to buy a new car." },
+                { pat: "〜ことになる", exp: "It has been decided that... Represents a decision outside one's direct control.", ex1jp: "来月、出張することになりました。", ex1en: "It has been decided that I will go on a business trip next month.", ex2jp: "来年、結婚することになりました。", ex2en: "It has been decided that we will get married next year.", ex3jp: "会議は中止になることになりました。", ex3en: "It has been decided that the meeting will be canceled.", ex4jp: "アメリカへ転勤することになりました。", ex4en: "It was decided I'll be transferred to America.", ex5jp: "この規則は変わることになりました。", ex5en: "It has been decided that this rule will change." },
+                { pat: "〜ところだ", exp: "Just about to / Just doing / Just finished doing.", ex1jp: "これからご飯を食べるところです。", ex1en: "I am just about to eat a meal.", ex2jp: "今、掃除しているところです。", ex2en: "I am currently in the middle of cleaning.", ex3jp: "たった今、バスが出たところです。", ex3en: "The bus has just this moment left.", ex4jp: "今、調べているところです。", ex4en: "I am looking into it right now.", ex5jp: "ちょうど家に着いたところです。", ex5en: "I have just arrived home." },
+                { pat: "〜ばかり", exp: "Only; nothing but. Also means 'just finished'.", ex1jp: "彼は毎日ゲームばかりしています。", ex1en: "He does nothing but play games every day.", ex2jp: "肉ばかり食べないで、野菜も食べなさい。", ex2en: "Don't just eat meat, eat vegetables too.", ex3jp: "日本に来たばかりです。", ex3en: "I just came to Japan.", ex4jp: "起きたばかりで、まだ眠いです。", ex4en: "I just woke up, so I am still sleepy.", ex5jp: "遊んでばかりいると、試験に落ちますよ。", ex5en: "If you do nothing but play, you'll fail the exam." },
+                { pat: "〜まま", exp: "As it is; remaining in a state.", ex1jp: "靴を履いたまま、部屋に入らないでください。", ex1en: "Please do not enter the room with your shoes still on.", ex2jp: "テレビをつけたまま、寝てしまいました。", ex2en: "I fell asleep with the TV still left on.", ex3jp: "昔のままの街並みです。", ex3en: "It is the cityscape exactly as it was in the past.", ex4jp: "立ったままパンを食べました。", ex4en: "I ate bread while remaining standing.", ex5jp: "ドアが開いたままです。", ex5en: "The door remains open." },
+                { pat: "〜なさい", exp: "Command form used by parents/teachers to children/students.", ex1jp: "早く寝なさい。", ex1en: "Go to sleep early.", ex2jp: "野菜も食べなさい。", ex2en: "Eat your vegetables too.", ex3jp: "静かにしなさい。", ex3en: "Be quiet.", ex4jp: "宿題を出しなさい。", ex4en: "Hand in your homework.", ex5jp: "次はこちらに来なさい。", ex5en: "Come here next." },
+                { pat: "〜ことができる", exp: "Can do; is capable of doing. Expresses potential.", ex1jp: "漢字を読むことができます。", ex1en: "I can read Kanji.", ex2jp: "ここでタバコを吸うことはできません。", ex2en: "You cannot smoke here.", ex3jp: "ピアノを弾くことができます。", ex3en: "I can play the piano.", ex4jp: "カードで払うことができますか。", ex4en: "Can I pay by card?", ex5jp: "何時に行くことができますか。", ex5en: "What time can you go?" },
+                { pat: "Potential Form (可能形)", exp: "Can do. Expresses potential or capability directly through verb conjugation.", ex1jp: "刺身が食べられます。", ex1en: "I can eat sashimi.", ex2jp: "彼は英語が話せます。", ex2en: "He can speak English.", ex3jp: "明日、早く起きられません。", ex3en: "I cannot wake up early tomorrow.", ex4jp: "この漢字が書けますか。", ex4en: "Can you write this Kanji?", ex5jp: "一人で病院へ行けますか。", ex5en: "Can you go to the hospital alone?" },
+                { pat: "Passive Form (受身形)", exp: "To be done by someone. Expresses passive voice or being negatively affected.", ex1jp: "先生に褒められました。", ex1en: "I was praised by the teacher.", ex2jp: "犬に手を噛まれました。", ex2en: "I had my hand bitten by a dog.", ex3jp: "雨に降られて、服が濡れました。", ex3en: "I was rained on, and my clothes got wet.", ex4jp: "誰かに財布を盗まれました。", ex4en: "I had my wallet stolen by someone.", ex5jp: "この絵はピカソによって描かれました。", ex5en: "This painting was painted by Picasso." },
+                { pat: "Causative Form (使役形)", exp: "To make someone do / To let someone do.", ex1jp: "母は私に部屋を掃除させました。", ex1en: "My mother made me clean the room.", ex2jp: "先生は学生に本を読ませました。", ex2en: "The teacher made the students read the book.", ex3jp: "子どもに好きなことをさせます。", ex3en: "I let my child do what they like.", ex4jp: "今日は早く帰らせてください。", ex4en: "Please let me go home early today.", ex5jp: "社長は彼をアメリカへ行かせた。", ex5en: "The president made him go to America." },
+                { pat: "〜たらいいですか / 〜ばいいですか", exp: "Asking for advice. 'What should I do?'", ex1jp: "どこで切符を買ったらいいですか。", ex1en: "Where should I buy a ticket?", ex2jp: "どうすればいいですか。", ex2en: "What should I do?", ex3jp: "誰に聞けばいいですか。", ex3en: "Who should I ask?", ex4jp: "何時に行ったらいいですか。", ex4en: "What time should I go?", ex5jp: "どんな服を着ればいいですか。", ex5en: "What kind of clothes should I wear?" },
+                { pat: "〜てほしい", exp: "I want someone else to do something.", ex1jp: "あなたに一緒に行ってほしいです。", ex1en: "I want you to go with me.", ex2jp: "彼にもっと勉強してほしい。", ex2en: "I want him to study more.", ex3jp: "親にいつまでも元気でいてほしい。", ex3en: "I want my parents to stay healthy forever.", ex4jp: "誰かに手伝ってほしいです。", ex4en: "I want someone to help me.", ex5jp: "このことは誰にも言わないでほしい。", ex5en: "I want you not to tell anyone about this." },
+                { pat: "〜はずがない", exp: "Cannot be; it is impossible that.", ex1jp: "彼が犯人のばずがありません。", ex1en: "It's impossible that he is the culprit.", ex2jp: "こんなに安い家があるはずがない。", ex2en: "It's impossible that there's a house this cheap.", ex3jp: "彼女が嘘をつくはずがない。", ex3en: "There's no way she would lie.", ex4jp: "あの店が今日休みのばずがない。", ex4en: "There's no way that shop is closed today.", ex5jp: "子どもにこの問題が分かるはずがない。", ex5en: "It's impossible for a child to understand this problem." },
+                { pat: "〜か〜か", exp: "Whether or not; embedded questions.", ex1jp: "明日行くか行かないか、まだ分かりません。", ex1en: "I don't know yet whether I will go tomorrow or not.", ex2jp: "これが正しいかどうか確認してください。", ex2en: "Please check whether this is correct or not.", ex3jp: "彼がいつ来るか知っていますか。", ex3en: "Do you know when he will come?", ex4jp: "何が起こったか教えてください。", ex4en: "Please tell me what happened.", ex5jp: "どこに鍵を置いたか忘れました。", ex5en: "I forgot where I put the key." },
+                { pat: "〜ために (Cause)", exp: "Because of; due to. Formal expression of cause/reason.", ex1jp: "事故のために、電車が遅れました。", ex1en: "Due to an accident, the train was delayed.", ex2jp: "大雪のために、学校が休みになった。", ex2en: "Because of heavy snow, school was closed.", ex3jp: "風邪を引いたために、会社を休みました。", ex3en: "Due to catching a cold, I took the day off work.", ex4jp: "台風のために、飛行機が飛びません。", ex4en: "Because of the typhoon, planes are not flying.", ex5jp: "注意が足りなかったために、失敗した。", ex5en: "Because of a lack of attention, I failed." }
+            ];
+
+            // Validation loop
+            defaultData.forEach((item, i) => {
+                if (!item.ex5en) {
+                    console.warn(`Missing ex5en at index ${i}`, item);
+                }
+            });
+
+            let savedData = localStorage.getItem('jlpt_n4_flashcards');
+            let data = savedData ? JSON.parse(savedData) : defaultData;
+            let currentIndex = 0;
+            
+            const card = document.getElementById('card');
+            const patternName = document.getElementById('pattern-name');
+            const explanation = document.getElementById('explanation');
+            
+            const examplesDisplay = document.getElementById('examples-display');
+            const ex1jp = document.getElementById('ex1-jp'), ex1en = document.getElementById('ex1-en');
+            const ex2jp = document.getElementById('ex2-jp'), ex2en = document.getElementById('ex2-en');
+            const ex3jp = document.getElementById('ex3-jp'), ex3en = document.getElementById('ex3-en');
+            const ex4jp = document.getElementById('ex4-jp'), ex4en = document.getElementById('ex4-en');
+            const ex5jp = document.getElementById('ex5-jp'), ex5en = document.getElementById('ex5-en');
+            const progress = document.getElementById('progress');
+            
+            const editFields = document.getElementById('edit-fields');
+            const editEx1Jp = document.getElementById('edit-ex1-jp'), editEx1En = document.getElementById('edit-ex1-en');
+            const editEx2Jp = document.getElementById('edit-ex2-jp'), editEx2En = document.getElementById('edit-ex2-en');
+            const editEx3Jp = document.getElementById('edit-ex3-jp'), editEx3En = document.getElementById('edit-ex3-en');
+            const editEx4Jp = document.getElementById('edit-ex4-jp'), editEx4En = document.getElementById('edit-ex4-en');
+            const editEx5Jp = document.getElementById('edit-ex5-jp'), editEx5En = document.getElementById('edit-ex5-en');
+
+            const btnEdit = document.getElementById('btn-edit');
+            const btnSaveEdit = document.getElementById('btn-save-edit');
+            
+            const modal = document.getElementById('add-modal');
+            const btnAddCard = document.getElementById('btn-add-card');
+            const btnCancelAdd = document.getElementById('btn-cancel-add');
+            const btnConfirmAdd = document.getElementById('btn-confirm-add');
+
+            function saveToStorage() {
+                localStorage.setItem('jlpt_n4_flashcards', JSON.stringify(data));
+            }
+
+            function updateCard() {
+                card.classList.remove('is-flipped');
+                
+                examplesDisplay.style.display = 'block';
+                editFields.style.display = 'none';
+                btnEdit.style.display = 'block';
+                btnSaveEdit.style.display = 'none';
+
+                setTimeout(() => {
+                    patternName.textContent = data[currentIndex].pat;
+                    explanation.textContent = data[currentIndex].exp;
+                    
+                    ex1jp.textContent = data[currentIndex].ex1jp || ""; ex1en.textContent = data[currentIndex].ex1en || "";
+                    ex2jp.textContent = data[currentIndex].ex2jp || ""; ex2en.textContent = data[currentIndex].ex2en || "";
+                    ex3jp.textContent = data[currentIndex].ex3jp || ""; ex3en.textContent = data[currentIndex].ex3en || "";
+                    ex4jp.textContent = data[currentIndex].ex4jp || ""; ex4en.textContent = data[currentIndex].ex4en || "";
+                    ex5jp.textContent = data[currentIndex].ex5jp || ""; ex5en.textContent = data[currentIndex].ex5en || "";
+                    
+                    progress.textContent = `${currentIndex + 1} / ${data.length}`;
+                }, 200); 
+            }
+
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName.toLowerCase() === 'button' || e.target.tagName.toLowerCase() === 'textarea') {
+                    return;
+                }
+                card.classList.toggle('is-flipped');
+            });
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % data.length;
+                updateCard();
+            });
+
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                currentIndex = (currentIndex - 1 + data.length) % data.length;
+                updateCard();
+            });
+
+            btnEdit.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                examplesDisplay.style.display = 'none';
+                editFields.style.display = 'flex';
+                
+                editEx1Jp.value = data[currentIndex].ex1jp || ""; editEx1En.value = data[currentIndex].ex1en || "";
+                editEx2Jp.value = data[currentIndex].ex2jp || ""; editEx2En.value = data[currentIndex].ex2en || "";
+                editEx3Jp.value = data[currentIndex].ex3jp || ""; editEx3En.value = data[currentIndex].ex3en || "";
+                editEx4Jp.value = data[currentIndex].ex4jp || ""; editEx4En.value = data[currentIndex].ex4en || "";
+                editEx5Jp.value = data[currentIndex].ex5jp || ""; editEx5En.value = data[currentIndex].ex5en || "";
+                
+                btnEdit.style.display = 'none';
+                btnSaveEdit.style.display = 'block';
+            });
+
+            btnSaveEdit.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                data[currentIndex].ex1jp = editEx1Jp.value; data[currentIndex].ex1en = editEx1En.value; 
+                data[currentIndex].ex2jp = editEx2Jp.value; data[currentIndex].ex2en = editEx2En.value; 
+                data[currentIndex].ex3jp = editEx3Jp.value; data[currentIndex].ex3en = editEx3En.value; 
+                data[currentIndex].ex4jp = editEx4Jp.value; data[currentIndex].ex4en = editEx4En.value; 
+                data[currentIndex].ex5jp = editEx5Jp.value; data[currentIndex].ex5en = editEx5En.value; 
+                saveToStorage(); 
+                
+                ex1jp.textContent = data[currentIndex].ex1jp; ex1en.textContent = data[currentIndex].ex1en;
+                ex2jp.textContent = data[currentIndex].ex2jp; ex2en.textContent = data[currentIndex].ex2en;
+                ex3jp.textContent = data[currentIndex].ex3jp; ex3en.textContent = data[currentIndex].ex3en;
+                ex4jp.textContent = data[currentIndex].ex4jp; ex4en.textContent = data[currentIndex].ex4en;
+                ex5jp.textContent = data[currentIndex].ex5jp; ex5en.textContent = data[currentIndex].ex5en;
+                
+                examplesDisplay.style.display = 'block';
+                editFields.style.display = 'none';
+                btnEdit.style.display = 'block';
+                btnSaveEdit.style.display = 'none';
+            });
+
+            btnAddCard.addEventListener('click', () => {
+                modal.style.display = 'flex';
+            });
+
+            btnCancelAdd.addEventListener('click', () => {
+                modal.style.display = 'none';
+                document.getElementById('new-pattern').value = '';
+                document.getElementById('new-explanation').value = '';
+                document.getElementById('new-ex1').value = ''; document.getElementById('new-ex2').value = '';
+                document.getElementById('new-ex3').value = ''; document.getElementById('new-ex4').value = '';
+                document.getElementById('new-ex5').value = '';
+            });
+
+            btnConfirmAdd.addEventListener('click', () => {
+                const pat = document.getElementById('new-pattern').value.trim();
+                const exp = document.getElementById('new-explanation').value.trim();
+                const parseEx = (val) => { const split = val.split('-'); return [split[0] ? split[0].trim() : "", split[1] ? split[1].trim() : ""]; };
+                
+                if (pat && exp) {
+                    const ex1 = parseEx(document.getElementById('new-ex1').value.trim());
+                    const ex2 = parseEx(document.getElementById('new-ex2').value.trim());
+                    const ex3 = parseEx(document.getElementById('new-ex3').value.trim());
+                    const ex4 = parseEx(document.getElementById('new-ex4').value.trim());
+                    const ex5 = parseEx(document.getElementById('new-ex5').value.trim());
+
+                    data.push({ 
+                        pat: pat, exp: exp, 
+                        ex1jp: ex1[0], ex1en: ex1[1],
+                        ex2jp: ex2[0], ex2en: ex2[1],
+                        ex3jp: ex3[0], ex3en: ex3[1],
+                        ex4jp: ex4[0], ex4en: ex4[1],
+                        ex5jp: ex5[0], ex5en: ex5[1]
+                    });
+                    
+                    saveToStorage();
+                    currentIndex = data.length - 1;
+                    updateCard();
+                    btnCancelAdd.click();
+                } else {
+                    alert("Please enter at least a Pattern and an Explanation!");
+                }
+            });
+
+            modal.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: true});
+            modal.addEventListener('touchend', (e) => e.stopPropagation(), {passive: true});
+
+            let touchStartX = 0; let touchEndX = 0;
+            const swipeContainer = document.getElementById('swipe-container');
+
+            swipeContainer.addEventListener('touchstart', e => {
+                if(e.target.tagName.toLowerCase() === 'textarea') return;
+                touchStartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            swipeContainer.addEventListener('touchend', e => {
+                if(e.target.tagName.toLowerCase() === 'textarea') return;
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, {passive: true});
+
+            function handleSwipe() {
+                const threshold = 50; 
+                if (touchStartX - touchEndX > threshold) document.getElementById('btn-next').click();
+                if (touchEndX - touchStartX > threshold) document.getElementById('btn-prev').click();
+            }
+
+            updateCard();
+        });
+    </script>
+</body>
+</html>
